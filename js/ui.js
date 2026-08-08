@@ -1,5 +1,5 @@
 /* ==========================================================================
-   MISSION CONTROL UI ENGINE // PRESETS, RANDOMIZER, CHIPS & MODALS
+   MISSION CONTROL UI ENGINE // EXPRESS 3-STEP BUILDER
    ========================================================================== */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -9,7 +9,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initRandomizers();
     initHeaderModal();
     initCopyCodesBtn();
-    autoShowBriefingModal();
     initCertToggle();
     initHideoutChips();
 });
@@ -39,19 +38,6 @@ function showToast(message, type = 'info') {
 }
 
 window.showToast = showToast;
-
-/**
- * Auto-Open Briefing Modal on Page Load
- */
-function autoShowBriefingModal() {
-    const modal = document.getElementById('briefing-modal');
-    if (modal) {
-        setTimeout(() => {
-            modal.classList.remove('hidden');
-            modal.style.display = 'flex';
-        }, 400);
-    }
-}
 
 /**
  * Toggles visibility of Certificate customization controls inside Advanced Options
@@ -182,7 +168,6 @@ function initPresets() {
         btnRandomAll.addEventListener('click', () => {
             if (window.SoundEngine) window.SoundEngine.playKeyClick();
 
-            // Shuffle array copy to get unique random spots
             const shuffled = [...globalRandomSpots].sort(() => 0.5 - Math.random());
 
             document.getElementById('clue-1').value = shuffled[0];
@@ -262,7 +247,7 @@ function initRandomizers() {
 }
 
 /**
- * Copy Codes to Clipboard Button
+ * Copy Codes Button
  */
 function initCopyCodesBtn() {
     const btn = document.getElementById('btn-copy-code');
@@ -291,7 +276,7 @@ function initCopyCodesBtn() {
 }
 
 /**
- * Parent Briefing Modal Logic
+ * How It Works Briefing Modal
  */
 function initHeaderModal() {
     const btnOpen = document.getElementById('btn-open-briefing');
@@ -328,7 +313,7 @@ function initHeaderModal() {
 }
 
 /**
- * Handles 3, 4, or 5 clue toggle button logic
+ * Handles 3, 4, or 5 clue toggles
  */
 function initClueCountToggles() {
     const clueButtons = document.querySelectorAll('#clue-count-selector .btn-toggle');
@@ -371,33 +356,7 @@ function initClueCountToggles() {
 }
 
 /**
- * Text Scrambler Effect for dynamic cipher feedback
- */
-function scrambleText(targetElement, finalString) {
-    const chars = '!@#$%^&*()_+-=[]{}|;:,.<>?/★♦▲✚✦✧⚔️⚓';
-    let iterations = 0;
-    const maxIterations = 8;
-
-    const interval = setInterval(() => {
-        targetElement.textContent = finalString
-            .split('')
-            .map((char, idx) => {
-                if (char === ' ' || char === '/') return char;
-                if (idx < iterations) return finalString[idx];
-                return chars[Math.floor(Math.random() * chars.length)];
-            })
-            .join('');
-
-        if (iterations >= finalString.length || iterations >= maxIterations) {
-            targetElement.textContent = finalString;
-            clearInterval(interval);
-        }
-        iterations++;
-    }, 25);
-}
-
-/**
- * Listens for user input to keep ALL mission clues updated in real time
+ * Updates mission clues live preview
  */
 function initLivePreview() {
     const juniorAgentNameInput = document.getElementById('junior-agent-name');
@@ -406,13 +365,13 @@ function initLivePreview() {
     const previewAgentName = document.getElementById('preview-agent-name');
     const previewMissionsContainer = document.getElementById('preview-missions-list');
 
-    function updatePreview(isCipherChange = false) {
+    function updatePreview() {
         const currentTheme = window.ThemeManager ? window.ThemeManager.getCurrentTheme() : {};
         const prefix = currentTheme.cluePrefix || 'Mission';
 
         const name = juniorAgentNameInput.value.trim() || 'HERO';
         const code = juniorAgentCodeInput.value.trim() || '007';
-        previewAgentName.textContent = `${name.toUpperCase()} (${code})`;
+        if (previewAgentName) previewAgentName.textContent = `${name.toUpperCase()} (${code})`;
 
         const activeClues = [];
         const clue1 = document.getElementById('clue-1');
@@ -438,8 +397,9 @@ function initLivePreview() {
 
         if (clueFinal) activeClues.push({ title: 'FINAL REWARD', element: clueFinal, defaultText: 'MISSION COMPLETE GREAT JOB' });
 
+        if (!previewMissionsContainer) return;
         previewMissionsContainer.innerHTML = '';
-        const selectedCipher = cipherTypeSelect.value;
+        const selectedCipher = cipherTypeSelect ? cipherTypeSelect.value : 'number';
 
         activeClues.forEach(item => {
             const rawMessage = item.element.value.trim() || item.element.placeholder || item.defaultText;
@@ -448,21 +408,11 @@ function initLivePreview() {
             const box = document.createElement('div');
             box.className = 'preview-mission-box';
             
-            const cipherDiv = document.createElement('div');
-            cipherDiv.className = 'cipher-text';
-            
             box.innerHTML = `
                 <span class="mission-tag">${item.title}</span>
                 <div class="raw-text">${rawMessage}</div>
+                <div class="cipher-text">${encrypted || '---'}</div>
             `;
-            box.appendChild(cipherDiv);
-
-            if (isCipherChange) {
-                scrambleText(cipherDiv, encrypted || '---');
-            } else {
-                cipherDiv.textContent = encrypted || '---';
-            }
-
             previewMissionsContainer.appendChild(box);
         });
     }
@@ -471,18 +421,16 @@ function initLivePreview() {
 
     const allInputs = document.querySelectorAll('.config-panel input');
     allInputs.forEach(input => {
-        input.addEventListener('input', (e) => {
-            if (window.SoundEngine && e.inputType !== 'deleteContentBackward') {
-                window.SoundEngine.playKeyClick();
-            }
-            updatePreview(false);
+        input.addEventListener('input', () => {
+            updatePreview();
         });
     });
 
-    cipherTypeSelect.addEventListener('change', () => {
-        if (window.SoundEngine) window.SoundEngine.playBlip();
-        updatePreview(true);
-    });
+    if (cipherTypeSelect) {
+        cipherTypeSelect.addEventListener('change', () => {
+            updatePreview();
+        });
+    }
 
-    updatePreview(false);
+    updatePreview();
 }
